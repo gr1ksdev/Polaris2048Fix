@@ -1,0 +1,17 @@
+# Xcode / build output
+Build/
+DerivedData/
+build/
+*.xcarchive
+
+# Xcode user state
+xcuserdata/
+*.xcuserstate
+*.xcscmblueprint
+
+# macOS
+.DS_Store
+
+# Python
+__pycache__/
+*.pyc
