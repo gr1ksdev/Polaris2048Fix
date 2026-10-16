@@ -1,5 +1,4 @@
 name: Build Polaris2048Fix
-
 on:
   workflow_dispatch:
   push:
@@ -8,12 +7,9 @@ on:
 jobs:
   build:
     runs-on: macos-26-intel
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Build macOS App
+      - uses: actions/checkout@v4
+      - name: Build Intel macOS app
         run: |
           xcodebuild \
             -project Polaris2048Fix.xcodeproj \
@@ -21,18 +17,13 @@ jobs:
             -configuration Release \
             -destination 'platform=macOS,arch=x86_64' \
             -derivedDataPath Build \
-            CODE_SIGNING_ALLOWED=NO \
-            build
-
-      - name: Package application
+            CODE_SIGNING_ALLOWED=NO build
+      - name: Package app
         run: |
-          APP="Build/Build/Products/Release/Polaris2048Fix.app"
-          test -d "$APP"
-          ditto -c -k --sequesterRsrc --keepParent \
-            "$APP" Polaris2048Fix-macOS.zip
-
-      - name: Upload application
-        uses: actions/upload-artifact@v4
+          ditto -c -k --keepParent \
+            Build/Build/Products/Release/Polaris2048Fix.app \
+            Polaris2048Fix-v0.3-x86_64.zip
+      - uses: actions/upload-artifact@v4
         with:
-          name: Polaris2048Fix-macOS
-          path: Polaris2048Fix-macOS.zip
+          name: Polaris2048Fix-v0.3-x86_64
+          path: Polaris2048Fix-v0.3-x86_64.zip

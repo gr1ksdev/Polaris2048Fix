@@ -8,7 +8,7 @@ struct Polaris2048FixApp: App {
         WindowGroup {
             ContentView()
                 .environmentObject(model)
-                .frame(minWidth: 800, minHeight: 610)
+                .frame(minWidth: 800, minHeight: 620)
         }
         .windowResizability(.contentMinSize)
     }

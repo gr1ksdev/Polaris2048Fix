@@ -12,6 +12,9 @@ xcuserdata/
 # macOS
 .DS_Store
 
+# Packaged source archives / build artifacts
+*.zip
+
 # Python
 __pycache__/
 *.pyc

@@ -46,11 +46,13 @@ struct PolarisPreparer {
         var root = try loadConfig(configURL)
         var deviceProperties = root["DeviceProperties"] as! [String: Any]
         var entries = try gpuEntries(root)
-        guard var props = entries[pciPath] as? [String: Any] else {
-            throw PolarisError.invalid("Caminho PCI não existe no config.plist.")
+        guard validPCIPath(pciPath) else {
+            throw PolarisError.invalid("Caminho PCI inválido. Use PciRoot(0x0)/Pci(0x...,0x...).")
         }
-        guard gpuLike(props) else {
-            throw PolarisError.invalid("A entrada selecionada não parece ser VGA/Radeon.")
+        var props = (entries[pciPath] as? [String: Any]) ?? [:]
+        // Never overwrite an existing property group for another device.
+        if !props.isEmpty && !gpuLike(props) {
+            throw PolarisError.invalid("Este caminho já contém propriedades de outro dispositivo ou não é reconhecível como GPU. Não vou sobrescrevê-lo.")
         }
         // Do not alter unrelated properties, boot arguments, SMBIOS, other PCI devices, etc.
         props["ATY,bin_image"] = Data(image)
@@ -131,7 +133,17 @@ struct PolarisPreparer {
 
     private func gpuLike(_ props: [String: Any]) -> Bool {
         let text = "\(stringValue(props["device_type"]) ?? "") \(stringValue(props["model"]) ?? "")".lowercased()
-        return text.contains("vga") || text.contains("radeon") || text.contains("display controller")
+        if text.contains("vga") || text.contains("radeon") || text.contains("display controller") || text.contains("amd gpu") { return true }
+        if let id = props["device-id"] as? Data, id.count >= 2 {
+            let code = UInt16(id[id.startIndex]) | (UInt16(id[id.startIndex + 1]) << 8)
+            if code == 0x6FDF || code == 0x67DF { return true }
+        }
+        return false
+    }
+
+    private func validPCIPath(_ value: String) -> Bool {
+        let pattern = #"^PciRoot\(0x[0-9a-fA-F]+\)(/Pci\(0x[0-9a-fA-F]+,0x[0-9a-fA-F]+\))+$"#
+        return value.range(of: pattern, options: .regularExpression) != nil
     }
 
     private func stringValue(_ property: Any?) -> String? {

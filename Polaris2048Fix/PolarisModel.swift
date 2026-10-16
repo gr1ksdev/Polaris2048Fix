@@ -27,6 +27,8 @@ final class PolarisModel: ObservableObject {
     @Published var romURL: URL?
     @Published var destinationURL: URL?
     @Published var candidates: [GPUEntry] = []
+    @Published var hardware: [DetectedAMDDevice] = []
+    @Published var hardwareStatus = "Verificação de dispositivos AMD ainda não executada."
     @Published var selectedPCIPath = ""
     @Published var status = "Selecione o config.plist da sua EFI de testes. Nada será instalado automaticamente."
     @Published var resultURL: URL?
@@ -50,7 +52,7 @@ final class PolarisModel: ObservableObject {
             candidates = try preparer.listGPUEntries(configURL: url)
             selectedPCIPath = candidates.count == 1 ? candidates[0].path : ""
             if candidates.isEmpty {
-                status = "Nenhuma entrada VGA/Radeon encontrada em DeviceProperties/Add. Confira o config.plist."
+                status = "Sem entradas de GPU no config.plist. Isso NÃO significa que a placa esteja ausente. Você pode informar manualmente o caminho PCI correto."
             } else {
                 status = "Encontrei \(candidates.count) entrada(s) de GPU no plist. Confirme o caminho PCI real antes de preparar."
             }
@@ -58,6 +60,18 @@ final class PolarisModel: ObservableObject {
             candidates = []
             selectedPCIPath = ""
             status = "Erro ao ler config.plist: \(error.localizedDescription)"
+        }
+    }
+
+    func scanHardware() {
+        do {
+            hardware = try HardwareDetector.scanAMD()
+            hardwareStatus = hardware.isEmpty
+                ? "Nenhum dispositivo AMD encontrado pelo ioreg. Isso não confirma ausência de GPU; veja o IORegistry."
+                : "Encontrado(s) \(hardware.count) dispositivo(s) AMD no IORegistry. A identificação pode refletir spoof do OpenCore."
+        } catch {
+            hardware = []
+            hardwareStatus = "Falha ao consultar ioreg: \(error.localizedDescription)"
         }
     }
 

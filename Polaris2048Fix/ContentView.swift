@@ -4,7 +4,8 @@ struct ContentView: View {
     @EnvironmentObject private var model: PolarisModel
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        ScrollView {
+          VStack(alignment: .leading, spacing: 16) {
             HStack(spacing: 12) {
                 Image(systemName: "cpu.fill")
                     .font(.system(size: 32))
@@ -12,7 +13,7 @@ struct ContentView: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Polaris2048Fix")
                         .font(.title).bold()
-                    Text("RX 580 2048SP · Preparador experimental OpenCore · v0.2")
+                    Text("RX 580 2048SP · Preparador experimental OpenCore · v0.3")
                         .foregroundStyle(.secondary)
                 }
                 Spacer()
@@ -31,25 +32,45 @@ struct ContentView: View {
                 .padding(8)
             }
 
-            GroupBox("Identificação da GPU") {
+            GroupBox("GPU detectada no macOS (somente leitura)") {
                 VStack(alignment: .leading, spacing: 8) {
                     HStack {
-                        Text("Entrada PCI no config.plist")
+                        Button("Detectar GPU AMD") { model.scanHardware() }
+                        Spacer()
+                    }
+                    Text(model.hardwareStatus)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    ForEach(model.hardware) { device in
+                        Text(device.label)
+                            .font(.caption.monospaced())
+                            .textSelection(.enabled)
+                    }
+                    Text("A detecção pelo IORegistry não fornece automaticamente o caminho DeviceProperties do OpenCore.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                .padding(8)
+            }
+
+            GroupBox("Caminho PCI na EFI de testes") {
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Text("Entradas já cadastradas")
                         Spacer()
                         Picker("", selection: $model.selectedPCIPath) {
-                            Text("Selecione uma GPU").tag("")
+                            Text("Informar manualmente").tag("")
                             ForEach(model.candidates) { entry in
                                 Text("\(entry.description) · \(entry.path)").tag(entry.path)
                             }
                         }
                         .labelsHidden()
-                        .frame(minWidth: 390)
+                        .frame(minWidth: 330)
                     }
-                    Text(model.selectedPCIPath.isEmpty ? "Selecione o caminho correto para a placa RX 580." : model.selectedPCIPath)
+                    TextField("PciRoot(0x0)/Pci(0x3,0x0)/Pci(0x0,0x0)", text: $model.selectedPCIPath)
+                        .textFieldStyle(.roundedBorder)
                         .font(.caption.monospaced())
-                        .foregroundStyle(.secondary)
-                        .textSelection(.enabled)
-                    Text("O caminho é extraído do plist. O app NÃO confirma automaticamente se esse caminho corresponde ao PCI atual do Mac.")
+                    Text("Digite o caminho PCI real se a entrada ainda não existir no plist. O exemplo acima NÃO deve ser copiado sem verificar sua EFI atual.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -60,7 +81,7 @@ struct ContentView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("A prévia adiciona ATY,bin_image (64 KiB) e device-id DF670000 ao arquivo gerado. Não altera outros dados propositalmente. Isso NÃO garante Metal.")
                         .fixedSize(horizontal: false, vertical: true)
-                    Toggle("Confirmei o caminho PCI e vou usar a prévia apenas em uma EFI USB de testes, após validar com ocvalidate.", isOn: $model.userConfirmed)
+                    Toggle("Verifiquei o caminho PCI na minha instalação atual e só aplicarei a prévia em EFI USB de testes, após ocvalidate.", isOn: $model.userConfirmed)
                         .toggleStyle(.checkbox)
                 }
                 .padding(8)
@@ -85,7 +106,10 @@ struct ContentView: View {
                 .background(.quaternary, in: RoundedRectangle(cornerRadius: 8))
             Spacer(minLength: 0)
         }
-        .padding(22)
+          .padding(22)
+          .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .onAppear { model.scanHardware() }
     }
 
     private func fileRow(_ title: String, file: URL?, action: @escaping () -> Void) -> some View {
